@@ -1,12 +1,30 @@
-import * as THREE from 'three'
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { moveEvents } from './controls'
+import {
+  Scene,
+  PerspectiveCamera,
+  WebGLRenderer,
+  GridHelper,
+  BoxGeometry,
+  MeshToonMaterial,
+  Mesh,
+  Group,
+  Clock,
+  Color
+} from 'three'
+import * as controller from './controller'
+import {
+  Clouds,
+  Sun
+} from './models'
+import { COLORS } from './constant'
 
-const scene = new THREE.Scene()
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.set(0, 3, 3)
+const scene = new Scene()
+scene.background = new Color(COLORS.SKY)
 
-const renderer = new THREE.WebGLRenderer()
+const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+camera.position.set(0, 2, 6)
+camera.lookAt(0, 0, 0)
+
+const renderer = new WebGLRenderer({ alpha: false })
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
@@ -18,34 +36,56 @@ window.addEventListener('resize', function () {
 }, false)
 
 // 添加网格辅助
-const gridHelper = new THREE.GridHelper(20, 20)
+const gridHelper = new GridHelper(20, 20)
 scene.add(gridHelper)
 
-// 添加轨道控制器
-const controls = new OrbitControls(camera, renderer.domElement)
+// 光晕
+const sun = new Sun(1, 1, 1, 0, 100, -200)
+scene.add(sun)
 
-// 添加一个box
-const geometry = new THREE.BoxGeometry(1, 1, 1)
-const material = new THREE.MeshBasicMaterial({ color: 0x00ffff })
-const cube = new THREE.Mesh(geometry, material)
-cube.position.y = 0.5
-scene.add(cube)
+// 云朵
+const clouds = new Clouds()
+scene.add(clouds.mesh)
 
-function animate() {
-  requestAnimationFrame(animate)
-  controls.update()
+// 添加玩家
+const geometry = new BoxGeometry(1, 1, 1)
+const material = new MeshToonMaterial({ color: COLORS.BROWNDARK })
+const player = new Mesh(geometry, material)
+player.position.y = 0.5
+scene.add(player)
+// 绑定 camera
+const playerCamera = new Group()
+playerCamera.add(camera)
+player.add(playerCamera)
+
+// 时间锁
+const clock = new Clock()
+
+// 初始化控制器
+controller.init(player)
+
+function animate () {
+  window.requestAnimationFrame(animate)
   renderer.render(scene, camera)
+  const deltaTime = clock.getDelta()
 
-  // 更新物体移动位置
-  if (moveEvents.moveKeys > 0) {
-    Object.values(moveEvents.keys).forEach(({ press, handle }) => press && handle())
-    const angle = controls.getAzimuthalAngle()
-    const { transformed } = moveEvents
-    transformed.applyAxisAngle(THREE.Object3D.DEFAULT_UP, angle)
-    cube.position.add(transformed)
-    camera.position.add(transformed)
-    controls.target.add(transformed) // The camera being controlled
-    transformed.set(0, 0, 0)
+  const { v, jv, jumping, mKeys } = controller.kc
+  // 移动
+  const movePos = v.clone().multiplyScalar(deltaTime)
+  if (mKeys > 0) {
+    controller.kc.acceleration(deltaTime)
+    player.position.add(movePos)
+    controller.kc.damping()
+  } else if (v.length() > 0.1) {
+    player.position.add(movePos)
+    controller.kc.damping()
+  }
+
+  // 跳跃
+  if (jumping) {
+    controller.kc.jump()
+    const jumpPos = jv.clone().multiplyScalar(deltaTime)
+    player.position.add(jumpPos)
   }
 }
 animate()

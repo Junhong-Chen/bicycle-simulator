@@ -9,6 +9,7 @@
   "author": "Junhong-Chen",
   "license": "ISC",
   "dependencies": {
+    "lil-gui": "^0.19.2",
     "three": "^0.162.0"
   },
   "devDependencies": {

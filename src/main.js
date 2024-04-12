@@ -16,6 +16,12 @@ import {
   Sun
 } from './models'
 import { COLORS } from './constant'
+import GUI from 'lil-gui'
+
+const gui = new GUI()
+gui.domElement.addEventListener('mousedown', function (e) {
+  e.stopPropagation()
+}, false)
 
 const scene = new Scene()
 scene.background = new Color(COLORS.SKY)
@@ -43,22 +49,19 @@ scene.add(gridHelper)
 const sun = new Sun(1, 1, 1, 0, 100, -200)
 scene.add(sun)
 
-// 云朵
-const clouds = new Clouds()
-scene.add(clouds.mesh)
-
 // 添加玩家
 const geometry = new BoxGeometry(1, 1, 1)
-const material = new MeshToonMaterial({ color: COLORS.BROWNDARK })
+const material = new MeshToonMaterial()
 const player = new Mesh(geometry, material)
 player.position.y = 0.5
 scene.add(player)
+
 // 绑定 camera
 const playerCamera = new Group()
 playerCamera.add(camera)
 player.add(playerCamera)
 
-// 时间锁
+// 时钟
 const clock = new Clock()
 
 // 初始化控制器
